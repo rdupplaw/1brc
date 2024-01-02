@@ -18,7 +18,7 @@ package dev.morling.onebrc;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -34,25 +34,19 @@ public class CalculateAverage_rdupplaw {
 
     public static void main(String[] args) throws IOException {
         try (Stream<String> lines = Files.lines(Path.of("./measurements.txt"))) {
-            StringBuilder output = new StringBuilder("{");
-
-            lines.parallel()
+            String output = lines.parallel()
                     .map(Measurement::from)
-                    .collect(Collectors.groupingByConcurrent(
+                    .collect(Collectors.groupingBy(
                             Measurement::station,
-                            ConcurrentSkipListMap::new,
+                            TreeMap::new,
                             Collectors.summarizingDouble(Measurement::temperature)))
-                    .forEach(
-                            (k, v) -> {
-                                output.append("%s=%.1f/%.1f/%.1f".formatted(k, v.getMin(), v.getAverage(), v.getMax()));
-                                output.append(", ");
-                            });
+                    .entrySet()
+                    .stream()
+                    .map(entry -> "%s=%.1f/%.1f/%.1f".formatted(entry.getKey(), entry.getValue().getMin(),
+                            entry.getValue().getAverage(), entry.getValue().getMax()))
+                    .collect(Collectors.joining(", "));
 
-            output.delete(output.length() - 2, output.length());
-
-            output.append("}");
-
-            System.out.println(output);
+            System.out.println("{" + output + "}");
         }
     }
 }
